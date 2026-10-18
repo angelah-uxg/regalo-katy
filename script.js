@@ -1,183 +1,142 @@
 
-const pantallaInicial = document.getElementById("pantalla-inicial");
-const contenido = document.getElementById("contenido");
-const botonEntrar = document.getElementById("entrar");
+document.addEventListener("DOMContentLoaded", () => {
+  const bienvenida = document.getElementById("bienvenida");
+  const abrirRegalo = document.getElementById("abrirRegalo");
+  const contenido = document.getElementById("contenido");
 
-const cancion = document.getElementById("cancion");
-const botonMusica = document.getElementById("boton-musica");
-const disco = document.getElementById("disco");
-const progreso = document.getElementById("progreso");
+  const musica = document.getElementById("musica");
+  const botonMusica = document.getElementById("botonMusica");
+  const barraProgreso = document.getElementById("barraProgreso");
+  const tiempoActual = document.getElementById("tiempoActual");
+  const duracionTotal = document.getElementById("duracionTotal");
 
-const carrusel = document.getElementById("carrusel");
-const anterior = document.getElementById("anterior");
-const siguiente = document.getElementById("siguiente");
+  const botonSorpresa = document.getElementById("mostrarSorpresa");
+  const sorpresaFinal = document.getElementById("sorpresaFinal");
 
-const botonSorpresa = document.getElementById("sorpresa-final");
-const mensajeFinal = document.getElementById("mensaje-final");
+  function mostrarTiempo(segundos) {
+    if (!Number.isFinite(segundos)) return "0:00";
 
-let musicaIntentada = false;
+    const minutos = Math.floor(segundos / 60);
+    const segundosRestantes = Math.floor(segundos % 60);
 
-// Intentar reproducir al entrar a la página.
-// El navegador puede bloquear el audio automático.
-async function reproducirMusica() {
-  try {
-    await cancion.play();
-    musicaIntentada = true;
-    actualizarReproductor();
-  } catch (error) {
-    musicaIntentada = false;
-    actualizarReproductor();
+    return `${minutos}:${String(segundosRestantes).padStart(2, "0")}`;
   }
-}
 
-// Estado visual del reproductor
-function actualizarReproductor() {
-  if (cancion.paused) {
-    botonMusica.textContent = "▶";
-    botonMusica.setAttribute("aria-label", "Reproducir canción");
-    disco.classList.remove("sonando");
-  } else {
-    botonMusica.textContent = "Ⅱ";
-    botonMusica.setAttribute("aria-label", "Pausar canción");
-    disco.classList.add("sonando");
+  function actualizarBotonMusica() {
+    if (!musica || !botonMusica) return;
+
+    botonMusica.textContent = musica.paused ? "▶" : "❚❚";
+    botonMusica.setAttribute(
+      "aria-label",
+      musica.paused ? "Reproducir música" : "Pausar música"
+    );
   }
-}
 
-// Intentar iniciar el audio al cargar.
-// Si no está disponible, la página seguirá funcionando.
-window.addEventListener("load", () => {
-  reproducirMusica();
-});
+  async function reproducirMusica() {
+    if (!musica) return;
 
-// Abrir el regalo y volver a intentar activar el audio.
-botonEntrar.addEventListener("click", async () => {
-  pantallaInicial.classList.add("oculto");
-  contenido.classList.remove("oculto");
-
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth"
-  });
-
-  if (cancion.paused) {
-    await reproducirMusica();
-  }
-});
-
-// Botón de reproducir y pausar
-botonMusica.addEventListener("click", async () => {
-  if (cancion.paused) {
-    await reproducirMusica();
-
-    if (cancion.paused) {
+    try {
+      await musica.play();
+    } catch (error) {
+      console.error("No se pudo reproducir la canción:", error);
       alert(
-        "No se pudo reproducir la canción. Comprueba que el archivo audio/te-quiero.mp3 exista y sea compatible."
+        "No se pudo reproducir la canción. Comprueba que el archivo " +
+        "musica/Te Quiero.mp3 esté subido correctamente."
       );
     }
-  } else {
-    cancion.pause();
+
+    actualizarBotonMusica();
   }
-});
 
-cancion.addEventListener("play", actualizarReproductor);
-cancion.addEventListener("pause", actualizarReproductor);
-cancion.addEventListener("ended", actualizarReproductor);
+  if (musica) {
+    musica.addEventListener("play", actualizarBotonMusica);
+    musica.addEventListener("pause", actualizarBotonMusica);
 
-// Barra de progreso de la canción
-cancion.addEventListener("timeupdate", () => {
-  if (
-    Number.isFinite(cancion.duration) &&
-    cancion.duration > 0
-  ) {
-    const porcentaje =
-      (cancion.currentTime / cancion.duration) * 100;
+    musica.addEventListener("loadedmetadata", () => {
+      if (duracionTotal) {
+        duracionTotal.textContent = mostrarTiempo(musica.duration);
+      }
+    });
 
-    progreso.style.width = `${porcentaje}%`;
-  }
-});
+    musica.addEventListener("timeupdate", () => {
+      if (tiempoActual) {
+        tiempoActual.textContent = mostrarTiempo(musica.currentTime);
+      }
 
-cancion.addEventListener("ended", () => {
-  progreso.style.width = "0%";
-});
+      if (
+        barraProgreso &&
+        Number.isFinite(musica.duration) &&
+        musica.duration > 0
+      ) {
+        barraProgreso.value =
+          (musica.currentTime / musica.duration) * 100;
+      }
+    });
 
-// Carrusel de fotos
-function moverCarrusel(direccion) {
-  const foto = carrusel.querySelector(".foto");
-
-  if (!foto) return;
-
-  const espacio = foto.getBoundingClientRect().width + 20;
-
-  carrusel.scrollBy({
-    left: espacio * direccion,
-    behavior: "smooth"
-  });
-}
-
-anterior.addEventListener("click", () => {
-  moverCarrusel(-1);
-});
-
-siguiente.addEventListener("click", () => {
-  moverCarrusel(1);
-});
-
-// Corazones flotantes
-const contenedorCorazones = document.getElementById("corazones");
-const simbolos = ["♡", "♥", "💜", "✧"];
-
-function crearCorazon() {
-  // No crear animaciones si la pestaña está oculta.
-  if (document.hidden) return;
-
-  const corazon = document.createElement("span");
-
-  corazon.className = "corazon-flotante";
-  corazon.textContent =
-    simbolos[Math.floor(Math.random() * simbolos.length)];
-
-  corazon.style.left = `${Math.random() * 100}vw`;
-  corazon.style.fontSize = `${12 + Math.random() * 15}px`;
-  corazon.style.animationDuration = `${7 + Math.random() * 6}s`;
-
-  contenedorCorazones.appendChild(corazon);
-
-  window.setTimeout(() => {
-    corazon.remove();
-  }, 14000);
-}
-
-window.setInterval(crearCorazon, 1100);
-
-// Sorpresa final
-botonSorpresa.addEventListener("click", () => {
-  const estaOculto = mensajeFinal.classList.contains("oculto");
-
-  mensajeFinal.classList.toggle("oculto");
-
-  botonSorpresa.textContent = estaOculto
-    ? "Cerrar mi sorpresita ♡"
-    : "Una última cosita para ti… 💜";
-
-  if (estaOculto) {
-    mensajeFinal.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
+    musica.addEventListener("error", () => {
+      console.error(
+        "Error de audio. Revisa la ruta: musica/Te Quiero.mp3",
+        musica.error
+      );
     });
   }
-});
 
-// Mostrar un aviso si el audio no carga.
-cancion.addEventListener("error", () => {
-  actualizarReproductor();
-  console.warn(
-    "No se pudo cargar el audio. Revisa la ruta audio/te-quiero.mp3."
-  );
-});
+  if (abrirRegalo) {
+    abrirRegalo.addEventListener("click", async () => {
+      if (bienvenida) bienvenida.classList.add("hidden");
+      if (contenido) contenido.classList.add("visible");
 
-// Avisar en consola si alguna fotografía no carga.
-document.querySelectorAll(".foto img, .portada-musica").forEach((imagen) => {
-  imagen.addEventListener("error", () => {
-    console.warn(`No se pudo cargar la imagen: ${imagen.getAttribute("src")}`);
-  });
+      await reproducirMusica();
+    });
+  }
+
+  if (botonMusica && musica) {
+    botonMusica.addEventListener("click", async () => {
+      if (musica.paused) {
+        await reproducirMusica();
+      } else {
+        musica.pause();
+      }
+    });
+  }
+
+  if (barraProgreso && musica) {
+    barraProgreso.addEventListener("input", () => {
+      if (Number.isFinite(musica.duration) && musica.duration > 0) {
+        musica.currentTime =
+          (Number(barraProgreso.value) / 100) * musica.duration;
+      }
+    });
+  }
+
+  if (botonSorpresa && sorpresaFinal) {
+    botonSorpresa.addEventListener("click", () => {
+      sorpresaFinal.hidden = false;
+      botonSorpresa.hidden = true;
+      sorpresaFinal.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    });
+  }
+
+  // Corazones flotantes decorativos
+  function crearCorazon() {
+    const corazon = document.createElement("span");
+
+    corazon.className = "floating-heart";
+    corazon.textContent = Math.random() > 0.5 ? "💜" : "♡";
+
+    corazon.style.left = `${Math.random() * 100}%`;
+    corazon.style.animationDuration = `${4 + Math.random() * 5}s`;
+    corazon.style.fontSize = `${12 + Math.random() * 18}px`;
+
+    document.body.appendChild(corazon);
+
+    setTimeout(() => corazon.remove(), 9000);
+  }
+
+  setInterval(crearCorazon, 1200);
+
+  actualizarBotonMusica();
 });
